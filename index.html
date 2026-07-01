@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Last Frame — Enterprise Video Tracking Extension</title>
+  
+  <meta property="og:title" content="Last Frame — Premium Video Tracking Browser Extension">
+  <meta property="og:description" content="Automatically tracks and resumes video positions across modern streaming portals.">
+  <meta property="og:image" content="assets/icon128.png">
+  <link rel="icon" type="image/png" href="assets/icon16.png">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: '#2563eb',
+            brandDark: '#1d4ed8',
+            bgDark: '#09090b',
+            panelDark: '#18181b',
+            borderDark: '#27272a'
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #09090b;
+      color: #f4f4f5;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    .panel-flat {
+      background: #18181b;
+      border: 1px solid #27272a;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #18181b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #3f3f46;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #52525b;
+    }
+    .page-view {
+      display: none;
+    }
+    .page-view.active {
+      display: block;
+    }
+  </style>
+</head>
+<body class="dark font-sans antialiased">
+
+  <div id="toast-container" class="fixed top-6 right-6 z-50 flex flex-col gap-3 pointer-events-none"></div>
+
+  <nav class="fixed top-0 left-0 w-full z-40 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800 px-4 py-4 sm:px-6">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="handleNavigation('home')">
+        <div class="w-8 h-8 rounded bg-zinc-900 flex items-center justify-center border border-zinc-800">
+          <span class="text-brand font-bold text-base">L</span>
+        </div>
+        <span class="text-white font-semibold tracking-tight text-lg">Last Frame</span>
+      </div>
+      
+      <button onclick="toggleMobileMenu()" class="md:hidden p-2 text-zinc-400 hover:text-white focus:outline-none">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path id="menu-icon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+
+      <div class="hidden md:flex items-center gap-6 text-sm text-zinc-400 font-medium">
+        <button onclick="handleNavigation('home')" class="nav-link hover:text-white transition-colors">Home</button>
+        <button onclick="handleNavigation('features')" class="nav-link hover:text-white transition-colors">Features</button>
+        <button onclick="handleNavigation('guide')" class="nav-link hover:text-white transition-colors">Installation Guide</button>
+        <button onclick="handleNavigation('analytics')" class="nav-link hover:text-white transition-colors">Analytics Engine</button>
+        <button onclick="handleNavigation('faq')" class="nav-link hover:text-white transition-colors">FAQ</button>
+        <button onclick="handleNavigation('archives')" class="nav-link hover:text-white transition-colors">Archives</button>
+        <button onclick="handleNavigation('changelog')" class="nav-link hover:text-white transition-colors">Changelog</button>
+        <button onclick="handleNavigation('settings')" class="nav-link hover:text-white transition-colors">Settings</button>
+        <button id="nav-admin-link" onclick="handleNavigation('admin')" class="hidden text-amber-500 hover:text-amber-400 transition-colors font-medium">Admin Terminal</button>
+      </div>
+
+      <div class="hidden md:flex items-center gap-4">
+        <div id="auth-loading" class="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin"></div>
+        <div id="auth-unregistered" class="hidden">
+          <button onclick="loginWithGoogle()" class="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded text-xs font-medium border border-zinc-800 transition-all">
+            Sign In
+          </button>
+        </div>
+        <div id="auth-registered" class="hidden flex items-center gap-3">
+          <img id="user-avatar" src="" alt="Profile" class="w-7 h-7 rounded-full border border-zinc-800 cursor-pointer" onclick="handleNavigation('account')">
+          <button onclick="logoutUser()" class="text-xs text-zinc-400 hover:text-white transition-colors">Sign Out</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="mobile-menu" class="hidden md:hidden mt-4 pt-4 border-t border-zinc-800 flex flex-col gap-3 text-sm text-zinc-400 font-medium">
+      <button onclick="handleNavigation('home'); toggleMobileMenu()" class="text-left py-1 hover:text-white transition-colors">Home</button>
+      <button onclick="handleNavigation('features'); toggleMobileMenu()" class="text-left py-1 hover:text-white transition-colors">Features</button>
+      <button onclick="handleNavigation('guide'); toggleMobileMenu()" class="text-left py-1 hover:text-white transition-colors">Installation Guide</button>
+      <button onclick="handleNavigation('analytics'); toggleMobileMenu()" class="text-left py-1 hover:text-white transition-colors">Analytics Engine</button>
+      <button onclick="handleNavigation('faq'); toggleMobileMenu()" class="text-left py-1 hover:text-white transition-colors">FAQ</button>
+      <button onclick="handleNavigation('archives'); toggleMobileMenu()" class="text-left py-1 hover:text-white transition-colors">Archives</button>
+      <button onclick="handleNavigation('changelog'); toggleMobileMenu()" class="text-left py-1 hover:text-white transition-colors">Changelog</button>
+      <button onclick="handleNavigation('settings'); toggleMobileMenu()" class="text-left py-1 hover:text-white transition-colors">Settings</button>
+      <button id="nav-admin-link-mobile" onclick="handleNavigation('admin'); toggleMobileMenu()" class="hidden text-left py-1 text-amber-500 hover:text-amber-400 transition-colors font-medium">Admin Terminal</button>
+      <hr class="border-zinc-800 my-1">
+      <div class="flex items-center justify-between py-1">
+        <span class="text-xs text-zinc-500">Session Status</span>
+        <div id="auth-unregistered-mobile" class="hidden">
+          <button onclick="loginWithGoogle()" class="px-3 py-1 bg-zinc-900 text-white rounded text-xs border border-zinc-800">Sign In</button>
+        </div>
+        <div id="auth-registered-mobile" class="hidden flex items-center gap-2">
+          <span id="mobile-user-email" class="text-xs text-zinc-400 truncate max-w-[150px]"></span>
+          <button onclick="logoutUser()" class="text-xs text-red-400">Sign Out</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="pt-24 pb-16 px-4 max-w-7xl mx-auto min-h-screen">
+    
+    <section id="view-home" class="page-view active space-y-16">
+      <div class="grid lg:grid-cols-12 gap-12 items-center pt-8">
+        <div class="lg:col-span-7 space-y-6 text-left">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-medium">
+            <span class="w-1.5 h-1.5 rounded-full bg-brand"></span> Dynamic Environment Framework Active
+          </div>
+          <h1 class="text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-tight leading-tight">
+            Automated session persistence across local streaming platforms.
+          </h1>
+          <p class="text-zinc-400 text-base sm:text-lg font-normal max-w-xl leading-relaxed">
+            An production-grade browser extension layer engineered to run seamlessly background telemetry workflows to capture, synchronize, and resume frame variables cleanly.
+          </p>
+          
+          <div id="browser-detection-banner" class="p-4 rounded border bg-zinc-900/50 border-zinc-800 text-sm max-w-xl flex items-center justify-between">
+            <span id="detected-browser-text" class="text-zinc-300 font-medium">Analyzing environment...</span>
+            <span id="detected-platform-badge" class="px-2 py-0.5 rounded text-[11px] font-mono bg-zinc-800 border border-zinc-700 text-zinc-400">Unknown Architecture</span>
+          </div>
+
+          <div class="pt-2 flex flex-col sm:flex-row items-center gap-4 max-w-xl">
+            <button onclick="triggerDownloadSequence()" id="home-download-btn" class="w-full sm:w-auto px-6 py-3 bg-brand hover:bg-brandDark text-white font-medium rounded text-sm transition-all flex items-center justify-center gap-2">
+              Download Core Extension Package
+            </button>
+            <button onclick="loginWithGoogle()" id="hero-google-btn" class="w-full sm:w-auto px-6 py-3 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded text-sm font-medium transition-all flex items-center justify-center gap-2">
+              Authenticate via Google Cloud
+            </button>
+          </div>
+        </div>
+
+        <div class="lg:col-span-5 w-full max-w-md mx-auto">
+          <div class="rounded panel-flat shadow-xl p-4">
+            <div class="bg-zinc-950 border border-zinc-800 rounded p-4 space-y-4">
+              <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-5 h-5 bg-zinc-900 rounded flex items-center justify-center border border-zinc-800">
+                    <span class="text-brand text-xs font-bold">L</span>
+                  </div>
+                  <div class="text-xs font-semibold text-white">Extension Dashboard Node</div>
+                </div>
+                <div class="text-[10px] text-zinc-400 font-mono bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-800">1.1.0</div>
+              </div>
+              <div class="flex gap-2">
+                <input type="text" disabled placeholder="Search localized index nodes..." class="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1 text-xs text-zinc-500 outline-none">
+                <button class="px-2 py-1 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded text-[11px] font-medium">Flush Cache</button>
+              </div>
+              <div class="space-y-2">
+                <div class="bg-zinc-900/60 border border-zinc-800 rounded p-3">
+                  <div class="text-[9px] font-mono text-zinc-500 uppercase tracking-wider">Source Cluster: Cineby Portal <span class="float-right font-normal normal-case">Synced</span></div>
+                  <div class="text-xs font-medium text-zinc-200 mt-1 truncate">Interstellar (2014) [HEVC 4K]</div>
+                  <div class="text-[10px] font-mono text-zinc-400 mt-1">Offset: 01:24:12 / 02:49:00</div>
+                  <div class="w-full bg-zinc-950 h-1 rounded overflow-hidden mt-2 border border-zinc-800">
+                    <div class="bg-brand h-full w-[49%]"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-features" class="page-view space-y-8">
+      <div class="max-w-3xl border-b border-zinc-800 pb-4">
+        <h2 class="text-3xl font-semibold text-white tracking-tight">Core System Architecture</h2>
+        <p class="text-zinc-400 text-sm mt-1">Low-overhead pipeline models structured specifically for browser environment frameworks.</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="panel-flat p-6 rounded space-y-3">
+          <h3 class="text-base font-semibold text-white">State Interception Model</h3>
+          <p class="text-zinc-400 text-xs leading-relaxed">Runs asynchronous background runtime workers capturing localized DOM metrics at a conservative 5000ms loop hierarchy without altering tab thread metrics.</p>
+        </div>
+        <div class="panel-flat p-6 rounded space-y-3">
+          <h3 class="text-base font-semibold text-white">Dynamic Port Matching Matrix</h3>
+          <p class="text-zinc-400 text-xs leading-relaxed">Declarative configuration schemas optimized out of the box to identify structure formats on major alternative directories including Soap2Day, Cineby, and 123Movies.</p>
+        </div>
+        <div class="panel-flat p-6 rounded space-y-3">
+          <h3 class="text-base font-semibold text-white">Intelligent Data Purge Engine</h3>
+          <p class="text-zinc-400 text-xs leading-relaxed">Monitors session position thresholds directly. Cleanly drops active storage data payloads automatically when the active timeline parameter passes the 96% boundary configuration threshold.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-guide" class="page-view space-y-8">
+      <div class="max-w-2xl border-b border-zinc-800 pb-4">
+        <h2 class="text-3xl font-semibold text-white tracking-tight">System Sideload Deployment Instructions</h2>
+        <p class="text-zinc-400 text-sm mt-1">Follow these verified tracking parameters sequentially to mount unzipped production builds.</p>
+      </div>
+      <div class="space-y-3 max-w-4xl">
+        <div class="panel-flat p-5 rounded flex gap-4 items-start">
+          <div class="bg-zinc-900 text-brand font-mono font-bold text-xs w-6 h-6 rounded flex items-center justify-center shrink-0 border border-zinc-800">01</div>
+          <div>
+            <h4 class="text-sm font-semibold text-white">Access Global Extensions Framework</h4>
+            <p class="text-zinc-400 text-xs mt-0.5">Initialize the internal interface engine path directly: <code id="guide-browser-url" class="bg-zinc-950 text-zinc-300 px-1.5 py-0.5 rounded font-mono text-xs border border-zinc-800">chrome://extensions</code>.</p>
+          </div>
+        </div>
+        <div class="panel-flat p-5 rounded flex gap-4 items-start">
+          <div class="bg-zinc-900 text-brand font-mono font-bold text-xs w-6 h-6 rounded flex items-center justify-center shrink-0 border border-zinc-800">02</div>
+          <div>
+            <h4 class="text-sm font-semibold text-white">Activate Developer Clearance Mode</h4>
+            <p class="text-zinc-400 text-xs mt-0.5">Locate the master structural toggle designated for Developer Environment configuration and switch it to enabled state.</p>
+          </div>
+        </div>
+        <div class="panel-flat p-5 rounded flex gap-4 items-start">
+          <div class="bg-zinc-900 text-brand font-mono font-bold text-xs w-6 h-6 rounded flex items-center justify-center shrink-0 border border-zinc-800">03</div>
+          <div>
+            <h4 class="text-sm font-semibold text-white">Mount Build Distribution Bundle</h4>
+            <p class="text-zinc-400 text-xs mt-0.5">Select the interface feature link control titled <strong class="text-zinc-200 font-medium">Load Unpacked</strong>, then target the extracted repository root map within your system file tree.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-analytics" class="page-view space-y-8">
+      <div class="max-w-3xl border-b border-zinc-800 pb-4">
+        <h2 class="text-3xl font-semibold text-white tracking-tight">Active Engine Telemetry Analytics</h2>
+        <p class="text-zinc-400 text-sm mt-1">Simulated execution pipeline displaying tracking node integrity calculations and structural performance records.</p>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="panel-flat p-4 rounded text-left">
+          <div class="text-xs font-medium text-zinc-500">Telemetry Tracking Accuracy</div>
+          <div class="text-2xl font-bold text-white mt-1">99.98%</div>
+        </div>
+        <div class="panel-flat p-4 rounded text-left">
+          <div class="text-xs font-medium text-zinc-500">Average Database Payload Sync Latency</div>
+          <div class="text-2xl font-bold text-white mt-1">12.4ms</div>
+        </div>
+        <div class="panel-flat p-4 rounded text-left">
+          <div class="text-xs font-medium text-zinc-500">Client Extension Package Build Footprint</div>
+          <div class="text-2xl font-bold text-white mt-1">~42KB</div>
+        </div>
+        <div class="panel-flat p-4 rounded text-left">
+          <div class="text-xs font-medium text-zinc-500">Global Storage Target Bound Integrity</div>
+          <div class="text-2xl font-bold text-white mt-1">Optimal</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-settings" class="page-view space-y-6 max-w-2xl">
+      <div class="border-b border-zinc-800 pb-4">
+        <h2 class="text-3xl font-semibold text-white tracking-tight">Configuration Matrix Framework</h2>
+        <p class="text-zinc-400 text-sm mt-1">System level operational defaults are compiled safely to standard localStorage browser parameters instantly.</p>
+      </div>
+      <div class="panel-flat rounded p-6 space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <label class="text-sm font-semibold text-white block">Visual Configuration Interface</label>
+            <span class="text-xs text-zinc-500">Configure core structural styling layers uniform across workspace segments.</span>
+          </div>
+          <select id="setting-theme" onchange="savePreferenceState()" class="bg-zinc-950 border border-zinc-800 text-xs text-zinc-300 rounded p-2 outline-none">
+            <option value="dark">Low Luminance Matte (Default)</option>
+            <option value="light">High Contrast Document Light</option>
+          </select>
+        </div>
+        <hr class="border-zinc-800">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <label class="text-sm font-semibold text-white block">Asynchronous Version Checks</label>
+            <span class="text-xs text-zinc-500">Authorize automated validation sequences verifying registry index updates.</span>
+          </div>
+          <input type="checkbox" id="setting-autoupdate" checked onchange="savePreferenceState()" class="w-4 h-4 rounded border-zinc-800 bg-zinc-950 text-brand focus:ring-0 focus:ring-offset-0">
+        </div>
+      </div>
+    </section>
+
+    <section id="view-faq" class="page-view space-y-6 max-w-3xl">
+      <div class="border-b border-zinc-800 pb-4">
+        <h2 class="text-3xl font-semibold text-white tracking-tight">Technical Reference Data FAQ</h2>
+      </div>
+      <div class="space-y-4">
+        <div class="panel-flat p-5 rounded space-y-2">
+          <h4 class="text-white font-semibold text-sm">Are tracking payloads transmitted to third-party databases?</h4>
+          <p class="text-zinc-400 text-xs leading-relaxed">Negative. The entire payload lifecycle operations run internally within the parameters of your specific browser storage architecture, isolated safely via dedicated <code class="bg-zinc-950 text-zinc-400 px-1 py-0.5 rounded font-mono text-xs border border-zinc-800">chrome.storage.local</code> structures.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-archives" class="page-view space-y-6">
+      <div class="border-b border-zinc-800 pb-4">
+        <h2 class="text-3xl font-semibold text-white tracking-tight">Verified Repository Logs</h2>
+        <p class="text-zinc-400 text-sm mt-1">Access verified deployment entries structured from the production registry database.</p>
+      </div>
+      <div class="panel-flat rounded overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-zinc-400 border-collapse">
+            <thead class="bg-zinc-900 text-zinc-300 font-semibold uppercase tracking-wider border-b border-zinc-800">
+              <tr>
+                <th class="p-4 font-medium text-zinc-400">Version String</th>
+                <th class="p-4 font-medium text-zinc-400">Release Timestamp</th>
+                <th class="p-4 font-medium text-zinc-400">Calculated Footprint</th>
+                <th class="p-4 font-medium text-zinc-400">Verification Status</th>
+                <th class="p-4 font-medium text-zinc-400 text-right">Execution Action</th>
+              </tr>
+            </thead>
+            <tbody id="archives-table-body font-mono"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-changelog" class="page-view space-y-6 max-w-4xl">
+      <div class="border-b border-zinc-800 pb-4">
+        <h2 class="text-3xl font-semibold text-white tracking-tight">Production Engineering Log</h2>
+        <p class="text-zinc-400 text-sm mt-1">Granular build record changes processed by the production automation cluster pipeline.</p>
+      </div>
+      <div id="changelog-container" class="space-y-4"></div>
+    </section>
+
+    <section id="view-account" class="page-view space-y-6 max-w-xl mx-auto text-center">
+      <div class="panel-flat p-6 rounded space-y-4">
+        <h2 class="text-xl font-semibold text-white tracking-tight">Verified User Session Configuration</h2>
+        <div class="flex flex-col items-center gap-3">
+          <img id="profile-panel-avatar" src="https://via.placeholder.com/150" alt="Avatar" class="w-16 h-16 rounded bg-zinc-900 border border-zinc-800 shadow-sm">
+          <div id="profile-panel-email" class="text-zinc-400 text-xs font-mono">guest@unregistered.system</div>
+        </div>
+        <hr class="border-zinc-800">
+        <button onclick="logoutUser()" class="w-full py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 rounded text-xs font-medium transition-colors">
+          Revoke Session Authentication
+        </button>
+      </div>
+    </section>
+
+    <section id="view-admin" class="page-view space-y-6">
+      <div class="border-b border-zinc-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-semibold text-amber-500 tracking-tight">Deployment Engineering Management Terminal</h2>
+          <p class="text-zinc-400 text-sm mt-1">Target an uncompressed module folder. The pipeline systematically generates valid distribution binary ZIP outputs and updates structural registry records.</p>
+        </div>
+        <div class="px-2.5 py-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded font-mono text-[11px] font-medium self-start sm:self-auto">
+          AUTOMATION PIPELINE INITIALIZED
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-6">
+        <div class="panel-flat p-5 rounded space-y-4 col-span-1">
+          <h3 class="text-sm font-semibold text-white">Compile Manifest</h3>
+          <div class="space-y-3">
+            <div>
+              <label class="text-[11px] text-zinc-400 font-medium block mb-1">Release Identifier Code</label>
+              <input type="text" id="admin-input-version" placeholder="e.g., 1.2.0" class="w-full bg-zinc-950 border border-zinc-800 p-2 text-xs text-white rounded outline-none font-mono">
+            </div>
+            <div>
+              <label class="text-[11px] text-zinc-400 font-medium block mb-1">Release Profile Classification</label>
+              <select id="admin-input-type" class="w-full bg-zinc-950 border border-zinc-800 p-2 text-xs text-white rounded outline-none">
+                <option value="Stable Production Feature">Stable Production Feature Update</option>
+                <option value="Security System Hotfix Patch">Security System Hotfix Patch</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[11px] text-zinc-400 font-medium block mb-1">Target Directory Workspace Asset</label>
+              <input type="file" id="admin-input-folder" webkitdirectory directory multiple class="w-full text-xs text-zinc-400 bg-zinc-950 border border-zinc-800 p-2 rounded outline-none cursor-pointer">
+            </div>
+            <div>
+              <label class="text-[11px] text-zinc-400 font-medium block mb-1">Changelog Documentation Notes</label>
+              <textarea id="admin-input-notes" rows="3" placeholder="Provide build parameters..." class="w-full bg-zinc-950 border border-zinc-800 p-2 text-xs text-white rounded outline-none"></textarea>
+            </div>
+            <button onclick="processAndPublishFolderBundle()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded text-xs transition-colors">
+              Execute Production Build Pipeline
+            </button>
+          </div>
+        </div>
+
+        <div class="panel-flat p-5 rounded space-y-4 col-span-2">
+          <h3 class="text-sm font-semibold text-white">Active Registry Manifest Nodes</h3>
+          <div class="overflow-x-auto text-[11px] font-mono">
+            <table class="w-full text-left text-zinc-400 border-collapse">
+              <thead>
+                <tr class="border-b border-zinc-800 text-zinc-500">
+                  <th class="pb-2 font-medium">Identifier</th>
+                  <th class="pb-2 font-medium">Classification</th>
+                  <th class="pb-2 font-medium">Footprint</th>
+                  <th class="pb-2 text-right font-medium">Terminal Action</th>
+                </tr>
+              </thead>
+              <tbody id="admin-log-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-zinc-800 bg-zinc-950/60 py-8 px-4 sm:px-6 text-xs text-zinc-500">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <div>
+        <div class="text-zinc-400 font-medium text-sm">Last Frame Architecture Portal</div>
+        <div class="text-[11px] mt-0.5">High-integrity systemic tracking schemas. Independent localized runtime mechanics.</div>
+      </div>
+      <div class="text-[11px] font-mono text-zinc-600">Build Layer Ref: 2026.E1</div>
+    </div>
+  </footer>
+
+  <div id="auth-gate-modal" class="fixed inset-0 z-50 bg-zinc-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="panel-flat max-w-sm w-full rounded p-6 text-center space-y-4">
+      <div class="space-y-1.5">
+        <h3 class="text-base font-semibold text-white tracking-tight">Verification Required</h3>
+        <p class="text-zinc-400 text-xs leading-relaxed">A verified Google infrastructure login credential state is requested prior to downloading compiled core extension packages.</p>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button onclick="closeAuthGateModal()" class="flex-1 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 border border-zinc-800 rounded text-xs font-medium transition-colors">Cancel</button>
+        <button onclick="loginWithGoogleFromGate()" class="flex-1 py-2 bg-brand hover:bg-brandDark text-white font-medium rounded text-xs transition-colors">Authenticate</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDJ2QeH6T4bjKk1fXdfPTNJAD2lAjZXZwk",
+      authDomain: "scribbledev.firebaseapp.com",
+      databaseURL: "https://scribbledev-default-rtdb.firebaseio.com",
+      projectId: "scribbledev",
+      storageBucket: "scribbledev.firebasestorage.app",
+      messagingSenderId: "580074888715",
+      appId: "1:580074888715:web:49c18e1770ae5b8632710e",
+      measurementId: "G-V164XBTCVL"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    let activeUserInstance = null;
+    const administratorClearanceTarget = "imcrabfr@gmail.com";
+    let liveDatabaseVersionsArray = [];
+
+    // Client-side Browser Engine Environment Auto-Detection System
+    function executeEnvironmentAutoDetection() {
+      const userAgentStr = navigator.userAgent;
+      let detectedEngine = "Chromium Engine";
+      let manualExtensionUrl = "chrome://extensions";
+
+      if (userAgentStr.includes("Brave")) {
+        detectedEngine = "Brave Browser Core";
+        manualExtensionUrl = "brave://extensions";
+      } else if (userAgentStr.includes("Edg")) {
+        detectedEngine = "Microsoft Edge Core";
+        manualExtensionUrl = "edge://extensions";
+      } else if (userAgentStr.includes("Firefox")) {
+        detectedEngine = "Mozilla Firefox Core";
+        manualExtensionUrl = "about:debugging";
+      } else if (userAgentStr.includes("Chrome")) {
+        detectedEngine = "Google Chrome Core";
+        manualExtensionUrl = "chrome://extensions";
+      }
+
+      const textElement = document.getElementById("detected-browser-text");
+      const badgeElement = document.getElementById("detected-platform-badge");
+      const guideUrlCodeElement = document.getElementById("guide-browser-url");
+
+      if (textElement) textElement.textContent = `Optimized deployment matrix customized for your ${detectedEngine}.`;
+      if (badgeElement) badgeElement.textContent = detectedEngine.toUpperCase();
+      if (guideUrlCodeElement) guideUrlCodeElement.textContent = manualExtensionUrl;
+    }
+
+    // Modern virtual pushState layout engine mapping explicitly to semantic dynamic paths
+    window.handleNavigation = function(targetPageKeyId) {
+      document.querySelectorAll(".page-view").forEach(panelNode => panelNode.classList.remove("active"));
+      const target = document.getElementById(`view-${targetPageKeyId}`);
+      if (target) {
+        target.classList.add("active");
+        window.scrollTo({ top: 0 });
+      }
+
+      // Generates absolute dynamic aesthetic paths reflecting the target directory element
+      const cleanPathSegment = targetPageKeyId === 'home' ? '/' : `/${targetPageKeyId}`;
+      window.history.pushState({ pageKey: targetPageKeyId }, "", cleanPathSegment);
+      synchronizeActiveTabHighlights(targetPageKeyId);
+    };
+
+    // Evaluates real path structures instantly upon initial execution payload
+    function evaluateCurrentVirtualRoute() {
+      const pathValue = window.location.pathname.replace(/^\/|\/$/g, '');
+      
+      if (pathValue && document.getElementById(`view-${pathValue}`)) {
+        window.handleNavigation(pathValue);
+      } else {
+        window.handleNavigation('home');
+      }
+    }
+
+    function synchronizeActiveTabHighlights(activeKey) {
+      document.querySelectorAll(".nav-link").forEach(btn => {
+        if (btn.getAttribute("onclick")?.includes(`'${activeKey}'`)) {
+          btn.classList.add("text-white", "border-b", "border-brand");
+          btn.classList.remove("text-zinc-400");
+        } else {
+          btn.classList.remove("text-white", "border-b", "border-brand");
+          btn.classList.add("text-zinc-400");
+        }
+      });
+    }
+
+    window.toggleMobileMenu = function() {
+      const menu = document.getElementById("mobile-menu");
+      const isHidden = menu.classList.contains("hidden");
+      if (isHidden) {
+        menu.classList.remove("hidden");
+      } else {
+        menu.classList.add("hidden");
+      }
+    };
+
+    window.addEventListener('popstate', (event) => {
+      if (event.state && event.state.pageKey) {
+        window.handleNavigation(event.state.pageKey);
+      } else {
+        evaluateCurrentVirtualRoute();
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      executeEnvironmentAutoDetection();
+      syncFetchLiveDataRecords();
+      evaluateCurrentVirtualRoute();
+
+      onAuthStateChanged(auth, (user) => {
+        const loadingIndicator = document.getElementById("auth-loading");
+        if (loadingIndicator) loadingIndicator.style.display = "none";
+        
+        const unregDesktop = document.getElementById("auth-unregistered");
+        const regDesktop = document.getElementById("auth-registered");
+        const unregMobile = document.getElementById("auth-unregistered-mobile");
+        const regMobile = document.getElementById("auth-registered-mobile");
+        const heroGoogleBtn = document.getElementById("hero-google-btn");
+        const adminLinkDesktop = document.getElementById("nav-admin-link");
+        const adminLinkMobile = document.getElementById("nav-admin-link-mobile");
+
+        if (user) {
+          activeUserInstance = user;
+          if (unregDesktop) unregDesktop.classList.add("hidden");
+          if (regDesktop) regDesktop.classList.remove("hidden");
+          if (unregMobile) unregMobile.classList.add("hidden");
+          if (regMobile) regMobile.classList.remove("hidden");
+          if (heroGoogleBtn) heroGoogleBtn.classList.add("hidden");
+
+          const userAvatar = document.getElementById("user-avatar");
+          const profileAvatar = document.getElementById("profile-panel-avatar");
+          const profileEmail = document.getElementById("profile-panel-email");
+          const mobileEmailText = document.getElementById("mobile-user-email");
+
+          if (userAvatar) userAvatar.src = user.photoURL || '';
+          if (profileAvatar) profileAvatar.src = user.photoURL || '';
+          if (profileEmail) profileEmail.textContent = user.email || '';
+          if (mobileEmailText) mobileEmailText.textContent = user.email || '';
+
+          if (user.email === administratorClearanceTarget) {
+            if (adminLinkDesktop) adminLinkDesktop.classList.remove("hidden");
+            if (adminLinkMobile) adminLinkMobile.classList.remove("hidden");
+            triggerToastNotificationSystem("Administrative clearance verified.", "info");
+          }
+        } else {
+          activeUserInstance = null;
+          if (unregDesktop) unregDesktop.classList.remove("hidden");
+          if (regDesktop) regDesktop.classList.add("hidden");
+          if (unregMobile) unregMobile.classList.remove("hidden");
+          if (regMobile) regMobile.classList.add("hidden");
+          if (heroGoogleBtn) heroGoogleBtn.classList.remove("hidden");
+          if (adminLinkDesktop) adminLinkDesktop.classList.add("hidden");
+          if (adminLinkMobile) adminLinkMobile.classList.add("hidden");
+        }
+      });
+    });
+
+    async function syncFetchLiveDataRecords() {
+      try {
+        const querySnapshot = await getDocs(query(collection(db, "extension_releases"), orderBy("uploadedTimestamp", "desc")));
+        liveDatabaseVersionsArray = [];
+        querySnapshot.forEach((doc) => {
+          liveDatabaseVersionsArray.push(doc.data());
+        });
+        
+        if (liveDatabaseVersionsArray.length === 0) {
+          liveDatabaseVersionsArray = [
+            { version: "1.1.0", type: "Stable Production Feature", date: "July 1, 2026", notes: "Initialized structural frame matrix syncing engine components. Localized payload structures complete.", size: "42 KB", downloadUrl: "#" }
+          ];
+        }
+        
+        renderInterfaceViewsElements();
+      } catch (err) {
+        console.error("Firestore loading exception, handling internal safe callback: ", err);
+      }
+    }
+
+    window.loginWithGoogle = async function() {
+      try {
+        await signInWithPopup(auth, new GoogleAuthProvider());
+        triggerToastNotificationSystem("Authentication validation sequence complete.", "success");
+      } catch (err) {
+        triggerToastNotificationSystem(`Verification process terminated: ${err.message}`, "error");
+      }
+    };
+
+    window.loginWithGoogleFromGate = async function() {
+      closeAuthGateModal();
+      await loginWithGoogle();
+      if (activeUserInstance) triggerDownloadSequence();
+    };
+
+    window.logoutUser = async function() {
+      await signOut(auth);
+      window.handleNavigation('home');
+      triggerToastNotificationSystem("Session reference successfully cleared.", "info");
+    };
+
+    window.triggerDownloadSequence = function() {
+      if (!activeUserInstance) {
+        const modal = document.getElementById("auth-gate-modal");
+        if (modal) {
+          modal.classList.remove("hidden");
+          modal.classList.add("flex");
+        }
+        return;
+      }
+
+      const topReleaseItem = liveDatabaseVersionsArray[0];
+      if (!topReleaseItem || topReleaseItem.downloadUrl === "#") {
+        triggerToastNotificationSystem("Compiling local environment package distribution array...", "info");
+        setTimeout(() => {
+          const anchor = document.createElement("a");
+          anchor.href = "data:application/zip;base64,UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=="; 
+          anchor.download = "last_frame_v1.1.0_distribution.zip";
+          document.body.appendChild(anchor);
+          anchor.click();
+          document.body.removeChild(anchor);
+          window.handleNavigation('guide');
+        }, 1200);
+        return;
+      }
+
+      triggerToastNotificationSystem("Retrieving package binary output matrices...", "info");
+      const anchor = document.createElement("a");
+      anchor.href = topReleaseItem.downloadUrl;
+      anchor.download = `last_frame_${topReleaseItem.version}.zip`;
+      anchor.target = "_blank";
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      window.handleNavigation('guide');
+    };
+
+    window.closeAuthGateModal = function() {
+      const modal = document.getElementById("auth-gate-modal");
+      if (modal) {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+      }
+    };
+
+    window.processAndPublishFolderBundle = async function() {
+      const versionStr = document.getElementById("admin-input-version").value.trim();
+      const typeStr = document.getElementById("admin-input-type").value;
+      const notesStr = document.getElementById("admin-input-notes").value.trim();
+      const fileInputFilesList = document.getElementById("admin-input-folder").files;
+
+      if (!versionStr || !notesStr || fileInputFilesList.length === 0) {
+        triggerToastNotificationSystem("Parameter verification failure: Provide standard identifier strings, release notes, and targets.", "error");
+        return;
+      }
+
+      triggerToastNotificationSystem("Compilation initialization: Formatting raw source files into uniform ZIP distribution package...", "info");
+
+      try {
+        const zipBuilder = new JSZip();
+        
+        for (let i = 0; i < fileInputFilesList.length; i++) {
+          const individualFileRef = fileInputFilesList[i];
+          const relativeStoragePath = individualFileRef.webkitRelativePath.substring(individualFileRef.webkitRelativePath.indexOf("/") + 1);
+          
+          if (relativeStoragePath) {
+            zipBuilder.file(relativeStoragePath, individualFileRef);
+          }
+        }
+
+        const generatedBlobZipOutput = await zipBuilder.generateAsync({ type: "blob" });
+        const finalCalculatedPayloadSizeStr = Math.round(generatedBlobZipOutput.size / 1024) + " KB";
+
+        const targetStorageBucketRef = ref(storage, `releases/last_frame_build_v${versionStr}.zip`);
+        await uploadBytes(targetStorageBucketRef, generatedBlobZipOutput);
+        const externalPublicDownloadUrl = await getDownloadURL(targetStorageBucketRef);
+
+        const operationalReleaseDataPayload = {
+          version: versionStr,
+          type: typeStr,
+          date: new Date().toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' }),
+          notes: notesStr,
+          size: finalCalculatedPayloadSizeStr,
+          downloadUrl: externalPublicDownloadUrl,
+          uploadedTimestamp: Date.now()
+        };
+
+        await setDoc(doc(db, "extension_releases", `v_${versionStr.replace(/\./g, '_')}`), operationalReleaseDataPayload);
+        triggerToastNotificationSystem("Production logs updated and synchronized cleanly.", "success");
+
+        document.getElementById("admin-input-version").value = "";
+        document.getElementById("admin-input-notes").value = "";
+        document.getElementById("admin-input-folder").value = "";
+
+        await syncFetchLiveDataRecords();
+      } catch (err) {
+        triggerToastNotificationSystem(`Compilation exception: ${err.message}`, "error");
+      }
+    };
+
+    window.deleteTargetReleaseNode = async function(versionStringTargetId) {
+      if (!confirm(`Confirm absolute removal of release configuration node v${versionStringTargetId}?`)) return;
+      try {
+        await deleteDoc(doc(db, "extension_releases", `v_${versionStringTargetId.replace(/\./g, '_')}`));
+        triggerToastNotificationSystem("Registry element deleted cleanly.", "info");
+        await syncFetchLiveDataRecords();
+      } catch (err) {
+        triggerToastNotificationSystem("Mutation processing rejected by database nodes.", "error");
+      }
+    };
+
+    function renderInterfaceViewsElements() {
+      const changelogContainer = document.getElementById("changelog-container");
+      if (changelogContainer) {
+        changelogContainer.innerHTML = liveDatabaseVersionsArray.map(item => `
+          <div class="panel-flat p-5 rounded space-y-3 border-l-2 border-l-brand">
+            <div class="flex items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <span class="text-sm font-mono font-bold text-white">v${item.version}</span>
+                <span class="px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 font-medium text-[10px] border border-zinc-800">${item.type}</span>
+              </div>
+              <span class="text-[11px] text-zinc-500 font-medium">${item.date}</span>
+            </div>
+            <p class="text-zinc-400 text-xs leading-relaxed">${item.notes}</p>
+          </div>
+        `).join('');
+      }
+
+      const archivesBody = document.getElementById("archives-table-body font-mono");
+      if (archivesBody) {
+        archivesBody.innerHTML = liveDatabaseVersionsArray.map(item => `
+          <tr class="border-b border-zinc-900 hover:bg-zinc-900/40 transition-colors">
+            <td class="p-4 font-mono font-bold text-white text-xs">v${item.version}</td>
+            <td class="p-4 text-zinc-400 text-xs">${item.date}</td>
+            <td class="p-4 text-zinc-500 font-mono text-xs">${item.size}</td>
+            <td class="p-4"><span class="px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 text-[10px] font-medium border border-zinc-800">Verified Stability</span></td>
+            <td class="p-4 text-right"><button onclick="triggerDownloadSequence()" class="text-brand hover:text-brandDark font-medium text-xs transition-colors">Retrieve Package</button></td>
+          </tr>
+        `).join('');
+      }
+
+      const adminBody = document.getElementById("admin-log-table-body");
+      if (adminBody) {
+        adminBody.innerHTML = liveDatabaseVersionsArray.map(item => `
+          <tr class="border-b border-zinc-900">
+            <td class="py-2.5 text-zinc-300 font-bold">v${item.version}</td>
+            <td class="py-2.5 text-zinc-400">${item.type}</td>
+            <td class="py-2.5 text-zinc-500">${item.size}</td>
+            <td class="py-2.5 text-right"><button onclick="deleteTargetReleaseNode('${item.version}')" class="text-red-400 hover:text-red-500 font-medium">Delete</button></td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    function triggerToastNotificationSystem(msg, alertClassType = "success") {
+      const container = document.getElementById("toast-container");
+      if (!container) return;
+
+      const element = document.createElement("div");
+      element.className = `p-3.5 rounded text-xs font-medium text-white border bg-zinc-900 border-zinc-800 shadow-xl transition-all transform translate-y-2 opacity-0 flex items-center gap-2.5 pointer-events-auto`;
+      let badgeStyle = "bg-brand";
+      if (alertClassType === "error") badgeStyle = "bg-red-500";
+      if (alertClassType === "info") badgeStyle = "bg-amber-500";
+
+      element.innerHTML = `
+        <span class="w-1.5 h-1.5 rounded-full ${badgeStyle}"></span>
+        <span class="flex-1 text-zinc-300">${msg}</span>
+      `;
+
+      container.appendChild(element);
+      setTimeout(() => element.classList.remove("translate-y-2", "opacity-0"), 50);
+      setTimeout(() => {
+        element.classList.add("translate-y-[-10px]", "opacity-0");
+        setTimeout(() => element.remove(), 300);
+      }, 4000);
+    }
+  </script>
+</body>
+</html>

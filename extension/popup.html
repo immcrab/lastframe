@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <div class="header">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <img src="icon48.png" style="width: 20px; height: 20px; border-radius: 4px;" alt="logo" />
+        <div class="logo">Last Frame</div>
+      </div>
+      <div class="tagline" id="welcome-tagline">Never lose your place again.</div>
+    </div>
+    
+    <div id="main-view-controls">
+      <div class="controls-row">
+        <input type="text" id="search-bar" placeholder="Search saved media..." />
+        <button id="btn-clear-all" class="btn-secondary" title="Clear all history">Clear All</button>
+        <button id="btn-settings" class="btn-secondary" title="Open Settings">⚙️</button>
+      </div>
+
+      <div class="section-header">
+        <span class="section-title">Active History</span>
+        <span id="history-count" class="history-count">0 items</span>
+      </div>
+
+      <div id="history-list" class="history-list">
+        <div class="empty-state">No media files currently cached.</div>
+      </div>
+    </div>
+
+    <div id="settings-view" class="hidden">
+      <div class="section-header">
+        <span class="section-title">Preferences</span>
+        <button id="btn-back" class="btn-secondary">← Back</button>
+      </div>
+
+      <div class="settings-group">
+        <label for="username-input" class="settings-label">Your Username</label>
+        <input type="text" id="username-input" placeholder="Enter username..." />
+      </div>
+
+      <div class="section-header" style="margin-top: 16px;">
+        <span class="section-title">Streaming Hubs</span>
+      </div>
+      <div class="streaming-grid">
+        <button class="btn-stream" data-url="http://www.soap2day.day">Soap2Day</button>
+        <button class="btn-stream" data-url="http://Cineby.at">Cineby</button>
+        <button class="btn-stream" data-url="http://flix2day.com">Flix2Day</button>
+        <button class="btn-stream" data-url="http://123moviesfree.day/">123Movies</button>
+        <button class="btn-stream" data-url="http://onlyflix.to/">OnlyFlix</button>
+        <button class="btn-stream" data-url="http://sflixz.day/">SFlix</button>
+        <button class="btn-stream" data-url="http://myflixerz.day/">MyFlixerz</button>
+      </div>
+    </div>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

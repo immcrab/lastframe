@@ -1,0 +1,283 @@
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #121214;
+  color: #e4e4e7;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  width: 340px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #1a1a1e;
+}
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+.popup-container {
+  padding: 16px;
+}
+
+.header {
+  background: #1a1a1e;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #ffffff;
+}
+
+.tagline {
+  font-size: 11px;
+  color: #71717a;
+  margin-top: 4px;
+}
+
+/* Controls & Search */
+.controls-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+#search-bar {
+  flex: 1;
+  background: #1a1a1e;
+  border: 1px solid #27272a;
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #ffffff;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+#search-bar:focus {
+  border-color: #3b82f6;
+}
+
+.btn-secondary {
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  color: #f4f4f5;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-secondary:hover {
+  background: #3f3f46;
+  border-color: #52525b;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #a1a1aa;
+  font-weight: 600;
+}
+
+.history-count {
+  font-size: 11px;
+  color: #71717a;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 290px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.history-item {
+  background: #1a1a1e;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.history-item:hover {
+  border-color: #3f3f46;
+}
+
+.item-context {
+  font-size: 10px;
+  font-weight: 600;
+  color: #a1a1aa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+  padding-right: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-time-ago {
+  float: right;
+  font-size: 10px;
+  color: #71717a;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+}
+
+.item-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #f4f4f5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 24px;
+}
+
+.item-meta {
+  font-size: 11px;
+  color: #71717a;
+  margin-top: 4px;
+}
+
+.progress-container {
+  width: 100%;
+  height: 4px;
+  background: #27272a;
+  border-radius: 2px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #3b82f6;
+  border-radius: 2px;
+  width: 0%;
+}
+
+.btn-delete {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: #71717a;
+  cursor: pointer;
+  font-size: 12px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.btn-delete:hover {
+  color: #ef4444;
+  background: #27272a;
+}
+
+.empty-state {
+  font-size: 12px;
+  color: #71717a;
+  text-align: center;
+  padding: 30px 0;
+}
+
+/* Append or merge these rules into your popup.css */
+
+.hidden {
+  display: none !important;
+}
+
+/* Settings view styles */
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.settings-label {
+  font-size: 11px;
+  color: #a1a1aa;
+  font-weight: 500;
+}
+
+#username-input {
+  background: #1a1a1e;
+  border: 1px solid #27272a;
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #ffffff;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+#username-input:focus {
+  border-color: #3b82f6;
+}
+
+/* Streaming Grid Shortcut buttons */
+.streaming-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.btn-stream {
+  background: #1a1a1e;
+  border: 1px solid #27272a;
+  color: #ffffff;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.btn-stream:hover {
+  background: #3b82f6;
+  border-color: #2563eb;
+  transform: translateY(-1px);
+}
